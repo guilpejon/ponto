@@ -30,16 +30,16 @@ let registries = [
 
 // root route
 app.get('/', (req, res) => {
-  res.send('<h1>Hello!</h1>');
+  // res.send('<h1>Hello!</h1>');
 });
 
 // registries INDEX
-app.get('/registries', (req, res) => {
+app.get('/api/registries', (req, res) => {
   res.send(registries);
 });
 
 // registries SHOW
-app.get('/registries/:id', (req, res) => {
+app.get('/api/registries/:id', (req, res) => {
   const id = Number(req.params.id);
   const registry = registries.find(registry => registry.id === id);
 
@@ -51,7 +51,7 @@ app.get('/registries/:id', (req, res) => {
 });
 
 // registries DESTROY
-app.delete('/registries/:id', (req, res) => {
+app.delete('/api/registries/:id', (req, res) => {
   const id = Number(req.params.id);
   const registry = registries.filter(registry => registry.id !== id);
 
@@ -67,7 +67,7 @@ const generateId = () => {
 };
 
 // registries CREATE
-app.post('/registries', (req, res) => {
+app.post('/api/registries', (req, res) => {
   const body = req.body;
 
   if (!body.location) {
