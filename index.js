@@ -1,10 +1,11 @@
 const express = require('express');
+const app = express(); // app initialization
+
 const bodyParser = require('body-parser');
-
-// app initialization
-const app = express();
-
 app.use(bodyParser.json());
+
+const cors = require('cors');
+app.use(cors());
 
 let registries = [
   {
