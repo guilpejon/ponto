@@ -1,3 +1,6 @@
+require('dotenv').config();
+const mongoose = require('mongoose');
+
 const express = require('express');
 const app = express(); // app initialization
 
@@ -28,26 +31,41 @@ let registries = [
   },
 ];
 
+const url = process.env.MONGODB_URI;
+mongoose
+  .connect(url, { useNewUrlParser: true })
+  .then(result => {
+    console.log('connected to MongoDB');
+  })
+  .catch(error => {
+    console.log('error connecting to MongoDB:', error.message);
+  });
+const Registry = require('./src/models/registry');
+
 // root route
-app.get('/', (req, res) => {
-  // res.send('<h1>Hello!</h1>');
-});
+app.get('/', (req, res) => {});
 
 // registries INDEX
 app.get('/api/registries', (req, res) => {
-  res.send(registries);
+  Registry.find({}).then(registries => {
+    res.json(registries.map(registry => registry.toJSON()));
+  });
 });
 
 // registries SHOW
 app.get('/api/registries/:id', (req, res) => {
-  const id = Number(req.params.id);
-  const registry = registries.find(registry => registry.id === id);
-
-  if (registry) {
-    res.json(registry);
-  } else {
-    res.status(404).end();
-  }
+  Registry.findById(req.params.id)
+    .then(registry => {
+      if (registry) {
+        res.json(registry.toJSON());
+      } else {
+        res.status(404).end();
+      }
+    })
+    .catch(error => {
+      console.log(error);
+      res.status(400).send({ error: 'malformatted id' });
+    });
 });
 
 // registries DESTROY
@@ -56,7 +74,6 @@ app.delete('/api/registries/:id', (req, res) => {
   const registry = registries.filter(registry => registry.id !== id);
 
   res.status(204).end();
-  // res.json(registry);
 });
 
 // generate current registry id for post requests
@@ -70,21 +87,22 @@ const generateId = () => {
 app.post('/api/registries', (req, res) => {
   const body = req.body;
 
-  if (!body.location) {
-    return res.status(400).json({
-      error: 'location missing',
-    });
-  }
+  // if (!body.location) {
+  //   return res.status(400).json({
+  //     error: 'location missing',
+  //   });
+  // }
 
-  const registry = {
-    location: body.location,
+  const registry = new Registry({
+    // location: body.location,
     date: new Date(),
-    id: generateId,
-  };
-
-  registries = registries.concat(registry);
+  });
 
   res.json(registry);
+
+  registry.save().then(savedRegistry => {
+    res.json(registry.toJSON);
+  });
 });
 
 // midleware to handle unknown endpoints
@@ -93,7 +111,7 @@ const unknownEndpoint = (req, res) => {
 };
 app.use(unknownEndpoint);
 
-PORT = process.env.PORT || 3000;
+PORT = process.env.PORT;
 app.listen(PORT, () => {
   // console.log(`Server running on ${PORT}`);
 });
