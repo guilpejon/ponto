@@ -1,15 +1,15 @@
-require('dotenv').config();
-const mongoose = require('mongoose');
-mongoose.set('useFindAndModify', false);
+require('dotenv').config()
+const mongoose = require('mongoose')
+mongoose.set('useFindAndModify', false)
 
-const express = require('express');
-const app = express(); // app initialization
+const express = require('express')
+const app = express() // app initialization
 
-const bodyParser = require('body-parser');
-app.use(bodyParser.json());
+const bodyParser = require('body-parser')
+app.use(bodyParser.json())
 
-const cors = require('cors');
-app.use(cors());
+const cors = require('cors')
+app.use(cors())
 
 let registries = [
   {
@@ -30,69 +30,69 @@ let registries = [
       accuracy: 50,
     },
   },
-];
+]
 
-const url = process.env.MONGODB_URI;
+const url = process.env.MONGODB_URI
 mongoose
   .connect(url, { useNewUrlParser: true })
   .then(result => {
-    console.log('connected to MongoDB');
+    console.log('connected to MongoDB')
   })
   .catch(error => {
-    console.log('error connecting to MongoDB:', error.message);
-  });
-const Registry = require('./src/models/Registry');
+    console.log('error connecting to MongoDB:', error.message)
+  })
+const Registry = require('./src/models/Registry')
 
 // root route
-app.get('/', (req, res) => {});
+app.get('/', (req, res) => {})
 
 // registries INDEX
 app.get('/api/registries', (req, res) => {
   Registry.find({}).then(registries => {
-    res.json(registries.map(registry => registry.toJSON()));
-  });
-});
+    res.json(registries.map(registry => registry.toJSON()))
+  })
+})
 
 // registries SHOW
 app.get('/api/registries/:id', (req, res) => {
   Registry.findById(req.params.id)
     .then(registry => {
       if (registry) {
-        res.json(registry.toJSON());
+        res.json(registry.toJSON())
       } else {
-        res.status(404).end();
+        res.status(404).end()
       }
     })
     .catch(error => {
-      console.log(error);
-      res.status(400).send({ error: 'malformatted id' });
-    });
-});
+      console.log(error)
+      res.status(400).send({ error: 'malformatted id' })
+    })
+})
 
 // registries DESTROY
 app.delete('/api/registries/:id', (req, res) => {
   Registry.findByIdAndRemove(req.params.id)
     .then(result => {
-      res.status(204).end();
+      res.status(204).end()
     })
     .catch(error => {
-      console.log(error);
-      res.status(400).send({ error: 'malformatted id' });
-    });
+      console.log(error)
+      res.status(400).send({ error: 'malformatted id' })
+    })
 
-  res.status(204).end();
-});
+  res.status(204).end()
+})
 
 // generate current registry id for post requests
 const generateId = () => {
   const maxId =
-    registries.length > 0 ? Math.max(...registries.map(n => n.id)) : 0;
-  return maxId + 1;
-};
+    registries.length > 0 ? Math.max(...registries.map(n => n.id)) : 0
+  return maxId + 1
+}
 
 // registries CREATE
 app.post('/api/registries', (req, res) => {
-  const body = req.body;
+  const body = req.body
 
   // if (!body.location) {
   //   return res.status(400).json({
@@ -103,47 +103,47 @@ app.post('/api/registries', (req, res) => {
   const registry = new Registry({
     // location: body.location,
     date: new Date(),
-  });
+  })
 
-  res.json(registry);
+  res.json(registry)
 
   registry
     .save()
     .then(savedRegistry => savedRegistry.toJSON())
     .then(savedAndFormattedNote => {
-      res.json(savedAndFormattedNote);
+      res.json(savedAndFormattedNote)
     })
     .catch(error => {
-      console.log(error);
-      res.status(400).send({ error: error.messages });
-    });
-});
+      console.log(error)
+      res.status(400).send({ error: error.messages })
+    })
+})
 
 app.put('/api/registries/:id', (req, res) => {
-  const body = req.body;
+  const body = req.body
 
   const registry = {
     createdAt: body.createdAt,
-  };
+  }
 
   Registry.findByIdAndUpdate(req.params.id, registry, { new: true })
     .then(updatedRegistry => updatedRegistry.toJSON)
     .then(updatedAndFormattedRegistry => {
-      res.json(updatedAndFormattedRegistry);
+      res.json(updatedAndFormattedRegistry)
     })
     .catch(error => {
-      console.log(error);
-      res.status(400).send({ error: 'malformatted id' });
-    });
-});
+      console.log(error)
+      res.status(400).send({ error: 'malformatted id' })
+    })
+})
 
 // midleware to handle unknown endpoints
 const unknownEndpoint = (req, res) => {
-  res.status(404).send({ error: 'unknown endpoint' });
-};
-app.use(unknownEndpoint);
+  res.status(404).send({ error: 'unknown endpoint' })
+}
+app.use(unknownEndpoint)
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000
 app.listen(PORT, () => {
   // console.log(`Server running on ${PORT}`);
-});
+})
