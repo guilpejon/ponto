@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const RegistrySchema = new mongoose.Schema({
   // geolocation: {
   //   type: String,
+  //   minlength: 5,
   //   required: false,
   // },
   createdAt: {

@@ -1,5 +1,6 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
+mongoose.set('useFindAndModify', false);
 
 const express = require('express');
 const app = express(); // app initialization
@@ -70,8 +71,14 @@ app.get('/api/registries/:id', (req, res) => {
 
 // registries DESTROY
 app.delete('/api/registries/:id', (req, res) => {
-  const id = Number(req.params.id);
-  const registry = registries.filter(registry => registry.id !== id);
+  Registry.findByIdAndRemove(req.params.id)
+    .then(result => {
+      res.status(204).end();
+    })
+    .catch(error => {
+      console.log(error);
+      res.status(400).send({ error: 'malformatted id' });
+    });
 
   res.status(204).end();
 });
@@ -100,9 +107,32 @@ app.post('/api/registries', (req, res) => {
 
   res.json(registry);
 
-  registry.save().then(savedRegistry => {
-    res.json(registry.toJSON);
-  });
+  registry
+    .save()
+    .then(savedRegistry => {
+      res.json(registry.toJSON);
+    })
+    .catch(error => {
+      console.log(error);
+      res.status(400).send({ error: error.messages });
+    });
+});
+
+app.put('/api/registries/:id', (req, res) => {
+  const body = req.body;
+
+  const registry = {
+    createdAt: body.createdAt,
+  };
+
+  Registry.findByIdAndUpdate(req.params.id, registry, { new: true })
+    .then(updatedRegistry => {
+      res.json(updatedRegistry.toJSON());
+    })
+    .catch(error => {
+      console.log(error);
+      res.status(400).send({ error: 'malformatted id' });
+    });
 });
 
 // midleware to handle unknown endpoints
