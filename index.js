@@ -41,7 +41,7 @@ mongoose
   .catch(error => {
     console.log('error connecting to MongoDB:', error.message);
   });
-const Registry = require('./src/models/registry');
+const Registry = require('./src/models/Registry');
 
 // root route
 app.get('/', (req, res) => {});
