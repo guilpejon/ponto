@@ -109,8 +109,9 @@ app.post('/api/registries', (req, res) => {
 
   registry
     .save()
-    .then(savedRegistry => {
-      res.json(registry.toJSON);
+    .then(savedRegistry => savedRegistry.toJSON())
+    .then(savedAndFormattedNote => {
+      res.json(savedAndFormattedNote);
     })
     .catch(error => {
       console.log(error);
@@ -126,8 +127,9 @@ app.put('/api/registries/:id', (req, res) => {
   };
 
   Registry.findByIdAndUpdate(req.params.id, registry, { new: true })
-    .then(updatedRegistry => {
-      res.json(updatedRegistry.toJSON());
+    .then(updatedRegistry => updatedRegistry.toJSON)
+    .then(updatedAndFormattedRegistry => {
+      res.json(updatedAndFormattedRegistry);
     })
     .catch(error => {
       console.log(error);
