@@ -6,17 +6,18 @@ const registriesRouter = require('./src/controllers/RegistryController')
 const middleware = require('./utils/middleware')
 const mongoose = require('mongoose')
 const cors = require('cors')
+const logger = require('./utils/logger')
 
 mongoose.set('useFindAndModify', false)
 
-console.log('connecting to', config.MONGODB_URI)
+logger.info('connecting to', config.MONGODB_URI)
 
 mongoose.connect(config.MONGODB_URI, { useNewUrlParser: true })
   .then(() => {
-    console.log('connected to MongoDB')
+    logger.info('connected to MongoDB')
   })
   .catch((error) => {
-    console.log('error connection to MongoDB:', error.message)
+    logger.error('error connection to MongoDB:', error.message)
   })
 
 app.use(cors())
