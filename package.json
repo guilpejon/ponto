@@ -4,12 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "push:deploy": "git push origin && git push heroku master",
-    "start": "node index.js",
+    "push:deploy": "git push origin && yarn deploy",
+    "deploy": "git push heroku master",
+    "start": "NODE_ENV=production node index.js",
+    "watch": "NODE_ENV=development nodemon index.js",
     "debug": "node --inspect index.js",
-    "watch": "nodemon index.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "eslint ."
+    "test": "NODE_ENV=test jest --verbose --runInBand",
+    "lint": "eslint .",
+    "logs:prod": "heroku logs -t"
   },
   "author": "",
   "license": "MIT",
@@ -17,7 +19,9 @@
     "cors": "^2.8.5",
     "dotenv": "^8.0.0",
     "express": "^4.17.1",
-    "mongoose": "^5.5.14"
+    "jest": "^24.8.0",
+    "mongoose": "^5.5.14",
+    "supertest": "^4.0.2"
   },
   "devDependencies": {
     "eslint": "^5.16.0",
