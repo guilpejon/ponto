@@ -1,14 +1,11 @@
 const mongoose = require('mongoose')
+const moment = require('moment')
 
 const RegistrySchema = new mongoose.Schema({
-  // geolocation: {
-  //   type: String,
-  //   minlength: 5,
-  //   required: false,
-  // },
   createdAt: {
     type: Date,
-    default: Date.now,
+    default: moment(),
+    min: moment().subtract(1, 'minute')
   },
 })
 
