@@ -1,5 +1,6 @@
 const registriesRouter = require('express').Router()
 const Registry = require('../models/Registry')
+const User = require('../models/User')
 const moment = require('moment')
 
 // registries INDEX
@@ -7,7 +8,8 @@ registriesRouter.get('/', async (req, res) => {
   // Registry.find({}).then(registries => {
   //   res.json(registries.map(registry => registry.toJSON()))
   // })
-  const registries = await Registry.find({})
+  const registries = await Registry
+    .find({}).populate('user', { username: 1, name: 1 })
   res.json(registries.map(registry => registry.toJSON()))
 })
 
@@ -42,12 +44,17 @@ registriesRouter.get('/:id', async (req, res) => {
 // registries CREATE
 registriesRouter.post('/', async (req, res) => {
   const body = req.body
+  const user = await User.findById(body.userId)
+
   const registry = new Registry({
-    createdAt: body.createdAt
+    createdAt: body.createdAt,
+    user: user._id
   })
 
   try {
     const savedRegistry = await registry.save()
+    user.registries = user.registries.concat(savedRegistry._id)
+    await user.save()
     res.json(savedRegistry.toJSON())
   } catch(exception) {
     console.log(exception)
