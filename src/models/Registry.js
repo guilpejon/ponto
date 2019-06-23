@@ -7,6 +7,10 @@ const RegistrySchema = new mongoose.Schema({
     default: moment(),
     min: moment().subtract(1, 'minute')
   },
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }
 })
 
 RegistrySchema.set('toJSON', {

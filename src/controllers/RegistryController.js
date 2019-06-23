@@ -1,9 +1,9 @@
-const registryRouter = require('express').Router()
+const registriesRouter = require('express').Router()
 const Registry = require('../models/Registry')
 const moment = require('moment')
 
 // registries INDEX
-registryRouter.get('/', async (req, res) => {
+registriesRouter.get('/', async (req, res) => {
   // Registry.find({}).then(registries => {
   //   res.json(registries.map(registry => registry.toJSON()))
   // })
@@ -12,7 +12,7 @@ registryRouter.get('/', async (req, res) => {
 })
 
 // registries SHOW
-registryRouter.get('/:id', async (req, res) => {
+registriesRouter.get('/:id', async (req, res) => {
   try{
     const register = await Registry.findById(req.params.id)
     if (register) {
@@ -40,7 +40,7 @@ registryRouter.get('/:id', async (req, res) => {
 })
 
 // registries CREATE
-registryRouter.post('/', async (req, res) => {
+registriesRouter.post('/', async (req, res) => {
   const body = req.body
   const registry = new Registry({
     createdAt: body.createdAt
@@ -67,7 +67,7 @@ registryRouter.post('/', async (req, res) => {
 })
 
 // registries DESTROY
-registryRouter.delete('/:id', async (req, res) => {
+registriesRouter.delete('/:id', async (req, res) => {
   try {
     await Registry.findByIdAndRemove(req.params.id)
     res.status(204).end()
@@ -88,7 +88,7 @@ registryRouter.delete('/:id', async (req, res) => {
   // res.status(204).end()
 })
 
-registryRouter.put('/:id', (req, res) => {
+registriesRouter.put('/:id', (req, res) => {
   const body = req.body
 
   const registry = {
@@ -106,4 +106,4 @@ registryRouter.put('/:id', (req, res) => {
     })
 })
 
-module.exports = registryRouter
+module.exports = registriesRouter
