@@ -4,6 +4,7 @@ const app = require('../app')
 const api = supertest(app)
 const helper = require('./test_helper')
 const Registry = require('../src/models/Registry')
+const User = require('../src/models/User')
 const moment = require('moment')
 
 describe('when there is initially some registries saved', () => {
@@ -141,6 +142,57 @@ describe('when there is initially some registries saved', () => {
       // const contents = registriesAtEnd.map(r => r.content)
       // expect(contents).not.toContain(registryToDelete.content)
     })
+  })
+})
+
+describe('when there is initially one user at db', () => {
+  beforeEach(async () => {
+    await User.deleteMany({})
+    const user = new User({ username: 'root', password: 'password' })
+    await user.save()
+  })
+
+  test('creation succeeds with a fresh username', async () => {
+    const usersAtStart = await helper.usersInDb()
+
+    const newUser = {
+      username: 'user_name',
+      name: 'User Name',
+      password: 'password'
+    }
+
+    await api
+      .post('/api/users')
+      .send(newUser)
+      .expect(200)
+      .expect('Content-Type', /application\/json/)
+
+    const usersAtEnd = await helper.usersInDb()
+    expect(usersAtEnd.length).toBe(usersAtStart.length + 1)
+
+    const usernames = usersAtEnd.map(u => u.username)
+    expect(usernames).toContain(newUser.username)
+  })
+
+  test('creation fails if username is already taken', async () => {
+    const usersAtStart = await helper.usersInDb()
+
+    const newUser = {
+      username: 'root',
+      name: 'User Name',
+      password: 'password'
+    }
+
+    const result = await api
+      .post('/api/users')
+      .send(newUser)
+      .expect(400)
+      .expect('Content-Type', /application\/json/)
+
+    expect(result.body.error.errors.username.message).toContain('`username` to be unique')
+
+    const usersAtEnd = await helper.usersInDb()
+    expect(usersAtEnd.length).toBe(usersAtStart.length)
   })
 })
 

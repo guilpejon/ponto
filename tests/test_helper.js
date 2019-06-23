@@ -1,4 +1,5 @@
 const Registry = require('../src/models/Registry')
+const User = require('../src/models/User')
 const moment = require('moment')
 
 const initialRegistries = [
@@ -20,6 +21,11 @@ const registriesInDb = async () => {
   return registries.map(registry => registry.toJSON())
 }
 
+const usersInDb = async () => {
+  const users = await User.find({})
+  return users.map(user => user.toJSON())
+}
+
 module.exports = {
-  initialRegistries, nonExistingId, registriesInDb
+  initialRegistries, nonExistingId, registriesInDb, usersInDb
 }
