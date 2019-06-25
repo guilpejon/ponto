@@ -2,6 +2,16 @@ const registriesRouter = require('express').Router()
 const Registry = require('../models/Registry')
 const User = require('../models/User')
 const moment = require('moment')
+const jwt = require('jsonwebtoken')
+
+const getTokenFrom = request => {
+  const authorization = request.get('authorization')
+
+  if (authorization && authorization.toLowerCase().startsWith('bearer')) {
+    return authorization.substring(7)
+  }
+  return null
+}
 
 // registries INDEX
 registriesRouter.get('/', async (req, res) => {
@@ -44,17 +54,26 @@ registriesRouter.get('/:id', async (req, res) => {
 // registries CREATE
 registriesRouter.post('/', async (req, res) => {
   const body = req.body
-  const user = await User.findById(body.userId)
-
-  const registry = new Registry({
-    createdAt: body.createdAt,
-    user: user._id
-  })
+  const token = getTokenFrom(req)
 
   try {
+    const decodedToken = jwt.verify(token, process.env.SECRET)
+
+    if (!token || !decodedToken.id) {
+      return res.status(401).json({ error: 'token missing or invalid' })
+    }
+
+    const user = await User.findById(body.userId)
+
+    const registry = new Registry({
+      createdAt: body.createdAt,
+      user: user._id
+    })
+
     const savedRegistry = await registry.save()
     user.registries = user.registries.concat(savedRegistry._id)
     await user.save()
+
     res.json(savedRegistry.toJSON())
   } catch(exception) {
     console.log(exception)
