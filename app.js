@@ -4,6 +4,7 @@ const bodyParser = require('body-parser')
 const app = express() // app initialization
 const registriesRouter = require('./src/controllers/RegistryController')
 const usersRouter = require('./src/controllers/UserController')
+const loginRouter = require('./src/controllers/Login')
 const middleware = require('./utils/middleware')
 const mongoose = require('mongoose')
 const cors = require('cors')
@@ -29,6 +30,7 @@ app.use(bodyParser.json())
 
 app.use('/api/registries', registriesRouter)
 app.use('/api/users', usersRouter)
+app.use('/api/login', loginRouter)
 
 app.use(middleware.unknownEndpoint)
 // app.use(middleware.errorHandler)
