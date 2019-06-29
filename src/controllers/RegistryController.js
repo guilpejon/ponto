@@ -3,6 +3,7 @@ const Registry = require('../models/Registry')
 const User = require('../models/User')
 const moment = require('moment')
 const jwt = require('jsonwebtoken')
+const logger = require('../../utils/logger')
 
 const getTokenFrom = request => {
   const authorization = request.get('authorization')
@@ -33,7 +34,7 @@ registriesRouter.get('/:id', async (req, res) => {
       res.status(404).end()
     }
   } catch(exception) {
-    console.log(exception)
+    // logger.info(exception)
     res.status(400).send({ error: 'malformatted id' })
   }
 
@@ -63,7 +64,7 @@ registriesRouter.post('/', async (req, res) => {
       return res.status(401).json({ error: 'token missing or invalid' })
     }
 
-    const user = await User.findById(body.userId)
+    const user = await User.findById(decodedToken.id)
 
     const registry = new Registry({
       createdAt: body.createdAt,
@@ -76,7 +77,7 @@ registriesRouter.post('/', async (req, res) => {
 
     res.json(savedRegistry.toJSON())
   } catch(exception) {
-    console.log(exception)
+    // logger.info(exception)
     res.status(400).send({ error: exception })
   }
 
@@ -98,7 +99,7 @@ registriesRouter.delete('/:id', async (req, res) => {
     await Registry.findByIdAndRemove(req.params.id)
     res.status(204).end()
   } catch(exception) {
-    console.log(exception)
+    // logger.info(exception)
     res.status(400).send({ error: 'malformatted id' })
   }
 
@@ -127,7 +128,7 @@ registriesRouter.put('/:id', (req, res) => {
       res.json(updatedAndFormattedRegistry)
     })
     .catch(error => {
-      console.log(error)
+      // logger.info(exception)
       res.status(400).send({ error: 'malformatted id' })
     })
 })

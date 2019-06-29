@@ -1,5 +1,8 @@
 const mongoose = require('mongoose')
+const bcrypt = require('bcrypt')
 const uniqueValidator = require('mongoose-unique-validator')
+
+const SALT_WORK_FACTOR = 10
 
 const userSchema = mongoose.Schema({
   username: {
@@ -7,7 +10,7 @@ const userSchema = mongoose.Schema({
     unique: true
   },
   name: String,
-  passwordHash: String,
+  password: { type: String, required: true },
   registries: [
     {
       type: mongoose.Schema.Types.ObjectId,
@@ -16,6 +19,21 @@ const userSchema = mongoose.Schema({
   ]
 })
 
+userSchema.pre('save', async function save(next) {
+  if (!this.isModified('password')) return next()
+  try {
+    const salt = await bcrypt.genSalt(SALT_WORK_FACTOR)
+    this.password = await bcrypt.hash(this.password, salt)
+    // return next()
+  } catch (err) {
+    // return next(err)
+  }
+})
+
+userSchema.methods.validatePassword = async function validatePassword(data) {
+  return bcrypt.compare(data, this.password)
+}
+
 userSchema.plugin(uniqueValidator)
 
 userSchema.set('toJSON', {
@@ -23,8 +41,8 @@ userSchema.set('toJSON', {
     returnedObject.id = returnedObject._id.toString()
     delete returnedObject._id
     delete returnedObject.__v
-    // the passwordHash should not be revealed
-    delete returnedObject.passwordHash
+    // the password should not be revealed
+    delete returnedObject.password
   }
 })
 

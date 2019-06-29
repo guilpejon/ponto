@@ -14,8 +14,13 @@ describe('when there is initially some registries saved', () => {
     // promises are executed in random order
     const registryObjects = helper.initialRegistries
       .map(registry => new Registry(registry))
-    const promiseArray = registryObjects.map(registry => registry.save())
-    await Promise.all(promiseArray) // wait for all the promises to end
+    const promiseRegistriesArray = registryObjects.map(registry => registry.save())
+    await Promise.all(promiseRegistriesArray) // wait for all the promises to end
+
+    await User.deleteMany({})
+    const user = await api
+      .post('/api/users')
+      .send({ username: 'root', password: 'password' })
 
     // DOES NOT WORK, forEach does not wait for async calls to end
     // helper.initialRegistries.forEach(async (registry) => {
@@ -39,8 +44,8 @@ describe('when there is initially some registries saved', () => {
 
   describe('viewing a specific registry', () => {
     test('succeeds with a valid id', async () => {
-      const notesAtStart = await helper.registriesInDb()
-      const registryToView = notesAtStart[0]
+      const registriesAtStart = await helper.registriesInDb()
+      const registryToView = registriesAtStart[0]
 
       const resultRegistry = await api
         .get(`/api/registries/${registryToView.id}`)
@@ -68,14 +73,27 @@ describe('when there is initially some registries saved', () => {
   })
 
   describe('addition of a new registry', () => {
+    let jwt
+
+    beforeEach(async () => {
+      const response = await api
+        .post('/api/login')
+        .send({ username: 'root', password: 'password' })
+      jwt = response.body.token
+    })
+
     test('succeeds setting a valid createdAt value', async () => {
       const now = moment()
       const newRegistry = new Registry({
         createdAt: now
       })
 
+      const usersAtStart = await helper.usersInDb()
+      const user = usersAtStart[0]
+
       await api
         .post('/api/registries')
+        .set('Authorization', `Bearer ${jwt}`)
         .send(newRegistry)
         .expect(200)
         .expect('Content-Type', /application\/json/)
@@ -94,6 +112,7 @@ describe('when there is initially some registries saved', () => {
 
       await api
         .post('/api/registries')
+        .set('Authorization', `Bearer ${jwt}`)
         .send(newRegistry)
         .expect(200)
         .expect('Content-Type', /application\/json/)
@@ -114,6 +133,7 @@ describe('when there is initially some registries saved', () => {
 
       await api
         .post('/api/registries')
+        .set('Authorization', `Bearer ${jwt}`)
         .send(newRegistry)
         .expect(400)
 
@@ -126,8 +146,8 @@ describe('when there is initially some registries saved', () => {
 
   describe('deletion of a registry', () => {
     test('succeeds with 204 if id is valid', async () => {
-      const notesAtStart = await helper.registriesInDb()
-      const registryToDelete = notesAtStart[0]
+      const registriesAtStart = await helper.registriesInDb()
+      const registryToDelete = registriesAtStart[0]
 
       await api
         .delete(`/api/registries/${registryToDelete.id}`)
@@ -146,12 +166,6 @@ describe('when there is initially some registries saved', () => {
 })
 
 describe('when there is initially one user at db', () => {
-  beforeEach(async () => {
-    await User.deleteMany({})
-    const user = new User({ username: 'root', password: 'password' })
-    await user.save()
-  })
-
   test('creation succeeds with a fresh username', async () => {
     const usersAtStart = await helper.usersInDb()
 
