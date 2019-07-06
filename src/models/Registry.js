@@ -4,8 +4,8 @@ const moment = require('moment')
 const RegistrySchema = new mongoose.Schema({
   createdAt: {
     type: Date,
-    default: moment(),
-    min: moment().subtract(1, 'minute')
+    default: moment()
+    // min: moment().subtract(1, 'minute')
   },
   user: {
     type: mongoose.Schema.Types.ObjectId,
@@ -17,6 +17,7 @@ RegistrySchema.set('toJSON', {
   transform: (document, returnedObject) => {
     returnedObject.id = returnedObject._id.toString()
     delete returnedObject._id
+    returnedObject.createdAt = returnedObject.createdAt.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
     delete returnedObject.__v
   },
 })
