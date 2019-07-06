@@ -3,15 +3,15 @@ const Registry = require('../models/Registry')
 const User = require('../models/User')
 const jwt = require('jsonwebtoken')
 const logger = require('../../utils/logger')
+const moment = require('moment')
 
 const aws = require('aws-sdk')
 aws.config.update({
-  region: 'us-east-1',
+  region: process.env.AWS_REGION,
   accessKeyId: process.env.AWS_ACCESS_KEY,
   secretAccessKey: process.env.AWS_SECRET_KEY
 })
-var rekognition = new aws.Rekognition()
-const fs = require('fs')
+let rekognition = new aws.Rekognition()
 
 const getTokenFrom = request => {
   const authorization = request.get('authorization')
@@ -37,12 +37,23 @@ registriesRouter.get('/:id', async (req, res) => {
   try{
     const register = await Registry.findById(req.params.id)
     if (register) {
+      const imageKey = register.imageKey
+      let params = {
+        Bucket: process.env.AWS_BUCKET,
+        Key: imageKey
+      }
+      let s3Bucket = new aws.S3( { params: { Bucket: process.env.AWS_BUCKET } } )
+      const s3Image = await s3Bucket.getObject(params).promise()
+      const s3ImageBase64 = Buffer.from(s3Image.Body).toString('base64')
+
+      register.image = `data:${s3Image.ContentType};base64,${s3ImageBase64}`
+
       res.json(register.toJSON())
     } else {
       res.status(404).end()
     }
   } catch(exception) {
-    // logger.info(exception)
+    logger.info(exception)
     res.status(400).send({ error: 'malformatted id' })
   }
 
@@ -72,61 +83,78 @@ registriesRouter.post('/', async (req, res) => {
       return res.status(401).json({ error: 'token missing or invalid' })
     }
 
-    const user = await User.findById(decodedToken.id)
-
-    const bitmap = fs.readFileSync('teste.jpeg')
-    const buffer = new Buffer.from(bitmap, 'base64')
-    var params = {
-      Image: {
-        // Bytes: body.image
-        Bytes: buffer
-      }
+    let s3Bucket = new aws.S3( { params: { Bucket: process.env.AWS_BUCKET } } )
+    const buf = new Buffer.from(req.body.image.replace(/^data:image\/\w+;base64,/, ''),'base64')
+    const userId = decodedToken.id
+    const imageKey = `${process.env.NODE_ENV}/${userId}/${moment().format('x')}`
+    let params = {
+      Key: imageKey,
+      Body: buf,
+      ContentEncoding: 'base64',
+      ContentType: 'image/jpeg'
     }
-    rekognition.detectText(params, async (err, data) => {
+    s3Bucket.putObject(params, async (err, data) => {
       if (err) {
-        // console.log(err, err.stack) // an error occurred
-        res.status(400).send({ error: err })
-      }
-      else {
-        var dateObject = data.TextDetections.find( element => {
-          return element['DetectedText'].includes('PIS')
-        })
+        console.log(err)
+        console.log('Error uploading data: ', data)
+      } else {
+        try {
+          const user = await User.findById(userId)
 
-        const dateLine = dateObject['DetectedText'].split(' ')
-        const extractedDate = dateLine[0].split('/')
-        const day = extractedDate[0]
-        const month = extractedDate[1]
-        const year = `20${extractedDate[2]}`
-        const hour = dateLine[1]
-        const date = new Date(`${year} ${month} ${day} ${hour}`).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+          params = {
+            Bucket: process.env.AWS_BUCKET,
+            Key: imageKey
+          }
+          const s3Image = await s3Bucket.getObject(params).promise()
 
-        const registry = new Registry({
-          createdAt: date,
-          user: user._id
-        })
+          params = {
+            Image: {
+              Bytes: s3Image.Body
+            }
+          }
 
-        const savedRegistry = await registry.save()
-        user.registries = user.registries.concat(savedRegistry._id)
-        await user.save()
+          rekognition.detectText(params, async (err, data) => {
+            if (err) {
+              console.log(err, err.stack) // an error occurred
+              res.status(400).send({ error: err })
+            }
+            else {
+              let dateObject = data.TextDetections.find( element => {
+                return element['DetectedText'].includes('PIS')
+              })
+              const dateLine = dateObject['DetectedText'].split(' ')
+              const extractedDate = dateLine[0].split('/')
+              const day = extractedDate[0]
+              const month = extractedDate[1]
+              const year = `20${extractedDate[2]}`
+              const hour = dateLine[1]
+              const date = new Date(`${year} ${month} ${day} ${hour}`).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
 
-        res.json(savedRegistry.toJSON())
+              const registry = new Registry({
+                createdAt: date,
+                imageKey,
+                user: userId
+              })
+
+              const savedRegistry = await registry.save()
+              user.registries = user.registries.concat(savedRegistry._id)
+              await user.save()
+
+              console.log('succesfully uploaded the image!')
+
+              res.json(savedRegistry.toJSON())
+            }
+          })
+        } catch(exception) {
+          logger.info(exception)
+          res.status(400).send({ error: exception })
+        }
       }
     })
   } catch(exception) {
     logger.info(exception)
     res.status(400).send({ error: exception })
   }
-
-  // registry
-  //   .save()
-  //   .then(savedRegistry => savedRegistry.toJSON())
-  //   .then(savedAndFormattedRegistry => {
-  //     res.json(savedAndFormattedRegistry)
-  //   })
-  //   .catch(error => {
-  //     console.log(error)
-  //     res.status(400).send({ error: error.messages })
-  //   })
 })
 
 // registries DESTROY

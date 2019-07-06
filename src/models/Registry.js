@@ -5,8 +5,9 @@ const RegistrySchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: moment()
-    // min: moment().subtract(1, 'minute')
   },
+  imageKey: String,
+  image: String,
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
