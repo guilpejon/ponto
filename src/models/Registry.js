@@ -14,6 +14,8 @@ const RegistrySchema = new mongoose.Schema({
   }
 })
 
+RegistrySchema.index({ createdAt: 1, user: 1 }, { unique: true })
+
 RegistrySchema.set('toJSON', {
   transform: (document, returnedObject) => {
     returnedObject.id = returnedObject._id.toString()

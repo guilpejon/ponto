@@ -101,11 +101,11 @@ registriesRouter.post('/', async (req, res) => {
         try {
           const user = await User.findById(userId)
 
-          params = {
+          const s3Params = {
             Bucket: process.env.AWS_BUCKET,
             Key: imageKey
           }
-          const s3Image = await s3Bucket.getObject(params).promise()
+          const s3Image = await s3Bucket.getObject(s3Params).promise()
 
           params = {
             Image: {
@@ -119,6 +119,7 @@ registriesRouter.post('/', async (req, res) => {
               res.status(400).send({ error: err })
             }
             else {
+              // console.log(data.TextDetections)
               let dateObject = data.TextDetections.find( element => {
                 return element['DetectedText'].includes('PIS')
               })
@@ -130,19 +131,24 @@ registriesRouter.post('/', async (req, res) => {
               const hour = dateLine[1]
               const date = new Date(`${year} ${month} ${day} ${hour}`).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
 
-              const registry = new Registry({
-                createdAt: date,
-                imageKey,
-                user: userId
-              })
+              let registry = await Registry.find({ createdAt: date, user: userId })
 
-              const savedRegistry = await registry.save()
-              user.registries = user.registries.concat(savedRegistry._id)
-              await user.save()
+              if (registry.length !== 0) {
+                await s3Bucket.deleteObject(s3Params).promise()
+                res.status(200).send()
+              } else {
+                registry = new Registry({
+                  createdAt: date,
+                  imageKey,
+                  user: userId
+                })
 
-              console.log('succesfully uploaded the image!')
+                const savedRegistry = await registry.save()
+                user.registries = user.registries.concat(savedRegistry._id)
+                await user.save()
 
-              res.json(savedRegistry.toJSON())
+                res.json(savedRegistry.toJSON())
+              }
             }
           })
         } catch(exception) {
