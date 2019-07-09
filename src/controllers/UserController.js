@@ -15,11 +15,11 @@ usersRouter.post('/', async (req, res) => {
     const user = new User({
       username: body.username,
       name: body.name,
+      email: body.email,
       password: body.password
     })
 
     const savedUser = await user.save()
-
 
     res.json(savedUser)
   } catch(exception) {
