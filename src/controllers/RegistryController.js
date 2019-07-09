@@ -24,12 +24,43 @@ const getTokenFrom = request => {
 
 // registries INDEX
 registriesRouter.get('/', async (req, res) => {
-  // Registry.find({}).then(registries => {
-  //   res.json(registries.map(registry => registry.toJSON()))
-  // })
-  const registries = await Registry
-    .find({}).populate('user', { username: 1, name: 1 })
-  res.json(registries.map(registry => registry.toJSON()))
+  const token = getTokenFrom(req)
+
+  try {
+    const decodedToken = jwt.verify(token, process.env.SECRET)
+
+    if (!token || !decodedToken.id) {
+      return res.status(401).json({ error: 'token missing or invalid' })
+    }
+
+    const userId = decodedToken.id
+    const user = await User.findById(userId)
+
+    let registries = await Registry.find({
+      user: user
+    })
+    // const registries = await Registry.find({}).populate('user', { username: 1, name: 1 })
+
+    let params = {
+      Bucket: process.env.AWS_BUCKET
+    }
+    let s3Bucket = new aws.S3( { params } )
+    let s3Image, s3ImageBase64, imageKey
+
+    registries = await Promise.all(registries.map(async (registry) => {
+      imageKey = registry.imageKey
+      params['Key'] = imageKey
+      s3Image = await s3Bucket.getObject(params).promise()
+      s3ImageBase64 = Buffer.from(s3Image.Body).toString('base64')
+      registry.image = `data:${s3Image.ContentType};base64,${s3ImageBase64}`
+      return registry
+    }))
+
+    res.json(registries.map(registry => registry.toJSON()))
+  } catch(exception) {
+    logger.info(exception)
+    res.status(400).send({ error: exception })
+  }
 })
 
 // registries SHOW
