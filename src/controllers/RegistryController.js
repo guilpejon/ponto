@@ -152,15 +152,14 @@ registriesRouter.post('/', async (req, res) => {
             else {
               // console.log(data.TextDetections)
               let dateObject = data.TextDetections.find( element => {
-                return element['DetectedText'].includes('PIS')
+                return element['DetectedText'].includes('PIS ')
               })
-              const dateLine = dateObject['DetectedText'].split(' ')
-              const extractedDate = dateLine[0].split('/')
-              const day = extractedDate[0]
-              const month = extractedDate[1]
-              const year = `20${extractedDate[2]}`
-              const hour = dateLine[1]
-              const date = new Date(`${year} ${month} ${day} ${hour}`).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+              const dateLine = dateObject['DetectedText'].replace(/\s/g, '')
+              const regex = /(\d{2}\/\d{2}\/\d{2})|(\d{2}:\d{2})/g
+              const [extractedDate, extractedHour] = dateLine.match(regex)
+              let [extractedDay, extractedMonth, extractedYear] = extractedDate.split('/')
+              extractedYear = `20${extractedYear}`
+              const date = new Date(`${extractedYear} ${extractedMonth} ${extractedDay} ${extractedHour}`).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
 
               let registry = await Registry.find({ createdAt: date, user: userId })
 
