@@ -1,5 +1,6 @@
 const mongoose = require('mongoose')
 const moment = require('moment')
+const mongoosePaginate = require('mongoose-paginate')
 
 const RegistrySchema = new mongoose.Schema({
   createdAt: {
@@ -24,5 +25,7 @@ RegistrySchema.set('toJSON', {
     delete returnedObject.__v
   },
 })
+
+RegistrySchema.plugin(mongoosePaginate)
 
 module.exports = mongoose.model('Registry', RegistrySchema)

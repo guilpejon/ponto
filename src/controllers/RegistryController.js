@@ -37,9 +37,12 @@ registriesRouter.get('/', async (req, res) => {
     const user = await User.findById(userId)
 
     // const registries = await Registry.find({}).populate('user', { username: 1, name: 1 })
-    let registries = await Registry.find({
-      user: user
-    })
+    // let registries = await Registry.find({
+    //   user: user
+    // })
+
+    const { page = 1, limit = 5 } = req.query
+    const registries = await Registry.paginate({ user }, { page, limit: Number(limit) })
 
     // let params = {
     //   Bucket: process.env.AWS_BUCKET
@@ -56,7 +59,8 @@ registriesRouter.get('/', async (req, res) => {
     //   return registry
     // }))
 
-    res.json(registries.map(registry => registry.toJSON()))
+    // res.json(registries.docs.map(registry => registry.toJSON()))
+    res.json(registries)
   } catch(exception) {
     logger.info(exception)
     res.status(400).send({ error: exception })
