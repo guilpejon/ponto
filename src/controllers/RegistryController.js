@@ -154,16 +154,29 @@ registriesRouter.post('/', async (req, res) => {
               res.status(400).send({ error: err })
             }
             else {
-              // console.log(data.TextDetections)
-              let dateObject = data.TextDetections.find( element => {
-                return element['DetectedText'].includes('PIS ')
-              })
-              const dateLine = dateObject['DetectedText'].replace(/\s/g, '')
               const regex = /(\d{2}\/\d{2}\/\d{2})|(\d{2}:\d{2})/g
-              const [extractedDate, extractedHour] = dateLine.match(regex)
+              let dateLine, extractedDate, extractedHour, hour, minute
+              data.TextDetections.find( element => {
+                if (element['Type'] === 'LINE') {
+                  if (element['DetectedText'].includes('PIS')) {
+                    dateLine = element['DetectedText'].replace(/\s/g, '').match(regex)
+                    if (dateLine !== null) {
+                      extractedDate = dateLine[0]
+                      extractedHour = dateLine[1]
+                      hour = extractedHour.split(':')[0]
+                      minute = extractedHour.split(':')[1]
+                      if (typeof extractedDate !== 'undefined' && typeof extractedHour !== 'undefined') {
+                        return
+                      }
+                    }
+                  }
+                }
+              })
               let [extractedDay, extractedMonth, extractedYear] = extractedDate.split('/')
               extractedYear = `20${extractedYear}`
-              const date = new Date(`${extractedYear} ${extractedMonth} ${extractedDay} ${extractedHour}`).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+              // I have no idea why I have to do this to make the createdAt date retrieve by mongoose work correctly
+              const date = new Date(extractedYear, extractedDay - 1, extractedMonth, hour, minute, 0).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+              // console.log(date)
 
               let registry = await Registry.find({ createdAt: date, user: userId })
 
