@@ -42,7 +42,7 @@ registriesRouter.get('/', async (req, res) => {
     // })
 
     const { page = 1, limit = 5 } = req.query
-    const registries = await Registry.paginate({ user }, { page, limit: Number(limit) })
+    const registries = await Registry.paginate({ user }, { page, limit: Number(limit), sort: {'createdAt': 'desc' }})
 
     // let params = {
     //   Bucket: process.env.AWS_BUCKET
