@@ -5,13 +5,13 @@ const jwt = require('jsonwebtoken')
 const logger = require('../../utils/logger')
 const moment = require('moment')
 
-const aws = require('aws-sdk')
+let aws = require('aws-sdk')
+
 aws.config.update({
   region: process.env.AWS_REGION,
   accessKeyId: process.env.AWS_ACCESS_KEY,
   secretAccessKey: process.env.AWS_SECRET_KEY
 })
-let rekognition = new aws.Rekognition()
 
 const getTokenFrom = request => {
   const authorization = request.get('authorization')
@@ -108,7 +108,6 @@ registriesRouter.get('/:id', async (req, res) => {
 
 // amazon rekognition
 registriesRouter.post('/rekognition', async (req, res) => {
-  const body = req.body
   const token = getTokenFrom(req)
 
   try {
@@ -118,74 +117,46 @@ registriesRouter.post('/rekognition', async (req, res) => {
       return res.status(401).json({ error: 'token missing or invalid' })
     }
 
-    let s3Bucket = new aws.S3( { params: { Bucket: process.env.AWS_BUCKET } } )
     const base64Image = req.body.image.base64
     const buf = new Buffer.from(base64Image.replace(/^data:image\/\w+;base64,/, ''),'base64')
-    const userId = decodedToken.id
-    const imageKey = `${process.env.NODE_ENV}/${userId}/${moment().format('x')}`
-    let params = {
-      Key: imageKey,
-      Body: buf,
-      ContentEncoding: 'base64',
-      ContentType: 'image/jpeg'
+    const params = {
+      Image: {
+        Bytes: buf
+      }
     }
-    s3Bucket.putObject(params, async (err, data) => {
+
+    let rekognition = new aws.Rekognition()
+    rekognition.detectText(params, async (err, data) => {
       if (err) {
-        console.log(err)
-        console.log('Error uploading data: ', data)
-      } else {
+        console.log(err, err.stack) // an error occurred
+        res.status(400).send({ error: err })
+      }
+      else {
         try {
-          const user = await User.findById(userId)
-
-          const s3Params = {
-            Bucket: process.env.AWS_BUCKET,
-            Key: imageKey
-          }
-          const s3Image = await s3Bucket.getObject(s3Params).promise()
-
-          params = {
-            Image: {
-              Bytes: s3Image.Body
-            }
-          }
-
-          rekognition.detectText(params, async (err, data) => {
-            if (err) {
-              console.log(err, err.stack) // an error occurred
-              res.status(400).send({ error: err })
-            }
-            else {
-              try {
-                const regex = /(\d{2}\/\d{2}\/\d{2})|(\d{2}:\d{2})/g
-                let dateLine, extractedDate, extractedHour, hour, minute
-                data.TextDetections.find( element => {
-                  if (element['Type'] === 'LINE') {
-                    if (element['DetectedText'].includes('PIS')) {
-                      dateLine = element['DetectedText'].replace(/\s/g, '').match(regex)
-                      if (dateLine !== null) {
-                        extractedDate = dateLine[0]
-                        extractedHour = dateLine[1]
-                        hour = extractedHour.split(':')[0]
-                        minute = extractedHour.split(':')[1]
-                        if (typeof extractedDate !== 'undefined' && typeof extractedHour !== 'undefined') {
-                          return
-                        }
-                      }
-                    }
+          const regex = /(\d{2}\/\d{2}\/\d{2})|(\d{2}:\d{2})/g
+          let dateLine, extractedDate, extractedHour, hour, minute
+          data.TextDetections.find( element => {
+            if (element['Type'] === 'LINE') {
+              if (element['DetectedText'].includes('PIS')) {
+                dateLine = element['DetectedText'].replace(/\s/g, '').match(regex)
+                if (dateLine !== null) {
+                  extractedDate = dateLine[0]
+                  extractedHour = dateLine[1]
+                  hour = extractedHour.split(':')[0]
+                  minute = extractedHour.split(':')[1]
+                  if (typeof extractedDate !== 'undefined' && typeof extractedHour !== 'undefined') {
+                    return
                   }
-                })
-                let [extractedDay, extractedMonth, extractedYear] = extractedDate.split('/')
-                extractedYear = `20${extractedYear}`
-                // I have no idea why I have to do this to make the createdAt date retrieve by mongoose work correctly
-                const date = new Date(extractedYear, extractedDay - 1, extractedMonth, hour, minute, 0).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-                // console.log(date)
-                res.status(200).send({ date, image: base64Image })
-              } catch(exception) {
-                logger.info(exception)
-                res.status(400).send({ error: exception })
+                }
               }
             }
           })
+          let [extractedDay, extractedMonth, extractedYear] = extractedDate.split('/')
+          extractedYear = `20${extractedYear}`
+          // I have no idea why I have to do this to make the createdAt date retrieve by mongoose work correctly
+          const date = new Date(extractedYear, extractedDay - 1, extractedMonth, hour, minute, 0).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+          // console.log(date)
+          res.status(200).send({ date, image: base64Image })
         } catch(exception) {
           logger.info(exception)
           res.status(400).send({ error: exception })
@@ -240,6 +211,7 @@ registriesRouter.post('/', async (req, res) => {
             }
           }
 
+          let rekognition = new aws.Rekognition()
           rekognition.detectText(params, async (err, data) => {
             if (err) {
               console.log(err, err.stack) // an error occurred
