@@ -58,8 +58,7 @@ registriesRouter.get('/:id', async (req, res) => {
     }
 
     const userId = decodedToken.id
-    const user = await User.findById(userId)
-    const register = await Registry.findOne({ _id: req.params.id, user: user._id })
+    const register = await Registry.findOne({ _id: req.params.id, user: userId })
 
     if (register) {
       const imageKey = register.imageKey
@@ -213,11 +212,26 @@ registriesRouter.post('/', async (req, res) => {
 
 // registries DESTROY
 registriesRouter.delete('/:id', async (req, res) => {
+  const token = getTokenFrom(req)
+
   try {
-    await Registry.findByIdAndRemove(req.params.id)
-    res.status(204).end()
+    const decodedToken = jwt.verify(token, process.env.SECRET)
+    const userId = decodedToken.id
+
+    if (!token || !userId) {
+      return res.status(401).json({ error: 'token missing or invalid' })
+    }
+
+    const registry = await Registry.findOne({ _id: req.params.id, user: userId })
+
+    if (registry) {
+      await Registry.deleteOne(registry)
+      res.status(204).end()
+    } else {
+      res.status(404).end()
+    }
   } catch(exception) {
-    // logger.info(exception)
+    logger.info(exception)
     res.status(400).send({ error: 'malformatted id' })
   }
 })
