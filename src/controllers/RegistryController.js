@@ -36,30 +36,9 @@ registriesRouter.get('/', async (req, res) => {
     const userId = decodedToken.id
     const user = await User.findById(userId)
 
-    // const registries = await Registry.find({}).populate('user', { username: 1, name: 1 })
-    // let registries = await Registry.find({
-    //   user: user
-    // })
-
     const { page = 1, limit = 5 } = req.query
     const registries = await Registry.paginate({ user }, { page, limit: Number(limit), sort: {'createdAt': 'desc' }})
 
-    // let params = {
-    //   Bucket: process.env.AWS_BUCKET
-    // }
-    // let s3Bucket = new aws.S3( { params } )
-    // let s3Image, s3ImageBase64, imageKey
-
-    // registries = await Promise.all(registries.map(async (registry) => {
-    //   imageKey = registry.imageKey
-    //   params['Key'] = imageKey
-    //   s3Image = await s3Bucket.getObject(params).promise()
-    //   s3ImageBase64 = Buffer.from(s3Image.Body).toString('base64')
-    //   registry.image = `data:${s3Image.ContentType};base64,${s3ImageBase64}`
-    //   return registry
-    // }))
-
-    // res.json(registries.docs.map(registry => registry.toJSON()))
     res.json(registries)
   } catch(exception) {
     logger.info(exception)
@@ -69,8 +48,19 @@ registriesRouter.get('/', async (req, res) => {
 
 // registries SHOW
 registriesRouter.get('/:id', async (req, res) => {
+  const token = getTokenFrom(req)
+
   try{
-    const register = await Registry.findById(req.params.id)
+    const decodedToken = jwt.verify(token, process.env.SECRET)
+
+    if (!token || !decodedToken.id) {
+      return res.status(401).json({ error: 'token missing or invalid' })
+    }
+
+    const userId = decodedToken.id
+    const user = await User.findById(userId)
+    const register = await Registry.findOne({ _id: req.params.id, user: user._id })
+
     if (register) {
       const imageKey = register.imageKey
       let params = {
@@ -91,19 +81,6 @@ registriesRouter.get('/:id', async (req, res) => {
     logger.info(exception)
     res.status(400).send({ error: 'malformatted id' })
   }
-
-  // Registry.findById(req.params.id)
-  //   .then(registry => {
-  //     if (registry) {
-  //       res.json(registry.toJSON())
-  //     } else {
-  //       res.status(404).end()
-  //     }
-  //   })
-  //   .catch(error => {
-  //     console.log(error)
-  //     res.status(400).send({ error: 'malformatted id' })
-  //   })
 })
 
 // amazon rekognition
@@ -155,7 +132,7 @@ registriesRouter.post('/rekognition', async (req, res) => {
           extractedYear = `20${extractedYear}`
           // I have no idea why I have to do this to make the createdAt date retrieve by mongoose work correctly
           const date = new Date(extractedYear, extractedDay - 1, extractedMonth, hour, minute, 0).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-          // console.log(date)
+          console.log(date)
           res.status(200).send({ date, image: base64Image })
         } catch(exception) {
           logger.info(exception)
@@ -283,17 +260,6 @@ registriesRouter.delete('/:id', async (req, res) => {
     // logger.info(exception)
     res.status(400).send({ error: 'malformatted id' })
   }
-
-  // Registry.findByIdAndRemove(req.params.id)
-  //   .then(() => {
-  //     res.status(204).end()
-  //   })
-  //   .catch(error => {
-  //     console.log(error)
-  //     res.status(400).send({ error: 'malformatted id' })
-  //   })
-
-  // res.status(204).end()
 })
 
 registriesRouter.put('/:id', (req, res) => {
@@ -309,7 +275,7 @@ registriesRouter.put('/:id', (req, res) => {
       res.json(updatedAndFormattedRegistry)
     })
     .catch(error => {
-      // logger.info(exception)
+      logger.info(exception)
       res.status(400).send({ error: 'malformatted id' })
     })
 })
