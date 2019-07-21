@@ -131,7 +131,7 @@ registriesRouter.post('/rekognition', async (req, res) => {
           let [extractedDay, extractedMonth, extractedYear] = extractedDate.split('/')
           extractedYear = `20${extractedYear}`
           // I have no idea why I have to do this to make the createdAt date retrieve by mongoose work correctly
-          const date = new Date(extractedYear, extractedDay - 1, extractedMonth, hour, minute, 0).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+          const date = new Date(extractedYear, extractedDay - 1, extractedMonth, hour, minute, 0).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }).slice(0, -3)
           console.log(date)
           res.status(200).send({ date, image: base64Image })
         } catch(exception) {
