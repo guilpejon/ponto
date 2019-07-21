@@ -36,7 +36,7 @@ registriesRouter.get('/', async (req, res) => {
     const userId = decodedToken.id
     const user = await User.findById(userId)
 
-    const { page = 1, limit = 5 } = req.query
+    const { page = 1, limit = 25 } = req.query
     const registries = await Registry.paginate({ user }, { page, limit: Number(limit), sort: {'createdAt': 'desc' }})
 
     res.json(registries)
