@@ -130,9 +130,8 @@ registriesRouter.post('/rekognition', async (req, res) => {
           })
           let [extractedDay, extractedMonth, extractedYear] = extractedDate.split('/')
           extractedYear = `20${extractedYear}`
-          // I have no idea why I have to do this to make the createdAt date retrieve by mongoose work correctly
-          const date = new Date(extractedYear, extractedDay - 1, extractedMonth, hour, minute, 0).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }).slice(0, -3)
-          console.log(date)
+          const date = new Date(extractedYear, extractedMonth - 1, extractedDay, hour, minute, 0).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }).slice(0, -3)
+          // console.log(date)
           res.status(200).send({ date, image: base64Image })
         } catch(exception) {
           logger.info(exception)
@@ -159,7 +158,7 @@ registriesRouter.post('/', async (req, res) => {
     }
 
     let s3Bucket = new aws.S3( { params: { Bucket: process.env.AWS_BUCKET } } )
-    const buf = new Buffer.from(req.body.image.replace(/^data:image\/\w+;base64,/, ''),'base64')
+    const buf = new Buffer.from(body.image.replace(/^data:image\/\w+;base64,/, ''),'base64')
     const userId = decodedToken.id
     const imageKey = `${process.env.NODE_ENV}/${userId}/${moment().format('x')}`
     let params = {
@@ -180,65 +179,26 @@ registriesRouter.post('/', async (req, res) => {
             Bucket: process.env.AWS_BUCKET,
             Key: imageKey
           }
-          const s3Image = await s3Bucket.getObject(s3Params).promise()
 
-          params = {
-            Image: {
-              Bytes: s3Image.Body
-            }
+          const date = body.date
+          let registry = await Registry.find({ createdAt: date, user: userId })
+
+          if (registry.length !== 0) {
+            await s3Bucket.deleteObject(s3Params).promise()
+            res.status(200).send()
+          } else {
+            registry = new Registry({
+              createdAt: body.date,
+              imageKey,
+              user: userId
+            })
+
+            const savedRegistry = await registry.save()
+            user.registries = user.registries.concat(savedRegistry._id)
+            await user.save()
+
+            res.json(savedRegistry.toJSON())
           }
-
-          let rekognition = new aws.Rekognition()
-          rekognition.detectText(params, async (err, data) => {
-            if (err) {
-              console.log(err, err.stack) // an error occurred
-              res.status(400).send({ error: err })
-            }
-            else {
-              const regex = /(\d{2}\/\d{2}\/\d{2})|(\d{2}:\d{2})/g
-              let dateLine, extractedDate, extractedHour, hour, minute
-              data.TextDetections.find( element => {
-                if (element['Type'] === 'LINE') {
-                  if (element['DetectedText'].includes('PIS')) {
-                    dateLine = element['DetectedText'].replace(/\s/g, '').match(regex)
-                    if (dateLine !== null) {
-                      extractedDate = dateLine[0]
-                      extractedHour = dateLine[1]
-                      hour = extractedHour.split(':')[0]
-                      minute = extractedHour.split(':')[1]
-                      if (typeof extractedDate !== 'undefined' && typeof extractedHour !== 'undefined') {
-                        return
-                      }
-                    }
-                  }
-                }
-              })
-              let [extractedDay, extractedMonth, extractedYear] = extractedDate.split('/')
-              extractedYear = `20${extractedYear}`
-              // I have no idea why I have to do this to make the createdAt date retrieve by mongoose work correctly
-              const date = new Date(extractedYear, extractedDay - 1, extractedMonth, hour, minute, 0).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-              // console.log(date)
-
-              let registry = await Registry.find({ createdAt: date, user: userId })
-
-              if (registry.length !== 0) {
-                await s3Bucket.deleteObject(s3Params).promise()
-                res.status(200).send()
-              } else {
-                registry = new Registry({
-                  createdAt: date,
-                  imageKey,
-                  user: userId
-                })
-
-                const savedRegistry = await registry.save()
-                user.registries = user.registries.concat(savedRegistry._id)
-                await user.save()
-
-                res.json(savedRegistry.toJSON())
-              }
-            }
-          })
         } catch(exception) {
           logger.info(exception)
           res.status(400).send({ error: exception })
