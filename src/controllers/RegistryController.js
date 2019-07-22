@@ -129,7 +129,7 @@ registriesRouter.post('/rekognition', async (req, res) => {
           })
           let [extractedDay, extractedMonth, extractedYear] = extractedDate.split('/')
           extractedYear = `20${extractedYear}`
-          const date = new Date(extractedYear, extractedMonth - 1, extractedDay, hour, minute, 0).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }).slice(0, -3)
+          const date = new Date(extractedYear, extractedMonth - 1, extractedDay, hour, minute, 0).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: 'numeric', month: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: false })
           // console.log(date)
           res.status(200).send({ date, image: base64Image })
         } catch(exception) {

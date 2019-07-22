@@ -21,7 +21,7 @@ RegistrySchema.set('toJSON', {
   transform: (document, returnedObject) => {
     returnedObject.id = returnedObject._id.toString()
     delete returnedObject._id
-    returnedObject.createdAt = returnedObject.createdAt.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }).slice(0, -3)
+    returnedObject.createdAt = returnedObject.createdAt.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: 'numeric', month: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: false })
     delete returnedObject.__v
   },
 })
